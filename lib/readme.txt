@@ -17,7 +17,7 @@ For example, see how can be organized `Foo` and `Bar` libraries:
 |  |--Foo
 |  |  |- Foo.c
 |  |  |- Foo.h
-|  |- readme.txt --> THIS FILE
+|  |- readme.txt --> THIS FILE\
 |- platformio.ini
 |--src
    |- main.c

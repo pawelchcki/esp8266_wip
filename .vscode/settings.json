@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+        "array": "cpp",
+        "rope": "cpp",
+        "slist": "cpp",
+        "initializer_list": "cpp",
+        "valarray": "cpp",
+        "memory": "cpp",
+        "functional": "cpp",
+        "future": "cpp",
+        "istream": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp"
+    }
+}
