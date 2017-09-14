@@ -1,3 +1,5 @@
+#include <vector>
+
 #include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
@@ -20,6 +22,8 @@ void tick() {
   int state = digitalRead(BUILTIN_LED);  // get the current state of GPIO1 pin
   digitalWrite(BUILTIN_LED, !state);     // set pin to the opposite state
 }
+
+ADC_MODE(ADC_VCC);
 
 //************************** End OF EC Function ***************************//
 
@@ -71,19 +75,22 @@ float getTemperature() {
   return sensors.getTempC(insideThermometer);
 }
 
-#define EC 13
-#define C_P 12
-#define C_M 14
+// #define EC 3
+// #define C_P 12
+// #define C_M 14
+
+#define EC 3
+#define C_P 0
+#define C_M 2
 
 float TemperatureCoef =
     0.019;  // this changes depending on what chemical we are measuring
 float K = 10.0;
 
-#include <vector>
 
 String fancy_ec() {
   String res = "";
-  vector<unsigned long> time0v, time1v;
+  std::vector<unsigned long> time0v, time1v;
 
   float tempStart = getTemperature();
 
@@ -133,39 +140,38 @@ String fancy_ec() {
   res += gauge("agro_ec_frequency", 1.0 / (timeElapsed / 16.0));
 
   float tempC = (getTemperature() + tempStart) / 2.0;
+  tempC = 25;
   int cnt = 0;
 
   res += gaugeType("agro_resistance_raw");
   res += gaugeType("agro_ec");
   res += gaugeType("agro_ec25");
 
-    for
-      each(auto time in time0v) {
-        double ec = 1000 / (time * K);
-        double ec25 = ec0 / (1 + TemperatureCoef * (temp - 25.0));
-        res += gaugeLabels("agro_resistance_raw", time, "time", "0",
-                           "measurement", String(cnt)) +
-               gaugeLabels("agro_ec", ec, "time", "0", "measurement",
-                           String(cnt)) +
-               gaugeLabels("agro_ec25", ec25, "time", "0", "measurement",
-                           String(cnt));
-      }
+  for (auto time: time0v) {
+    double ec = 1000 / (time * K);
+    double ec25 = ec / (1 + TemperatureCoef * (tempC - 25.0));
+    res +=
+        gaugeLabels("agro_resistance_raw", time, "time", "0", "measurement",
+                    String(cnt)) +
+        gaugeLabels("agro_ec", ec, "time", "0", "measurement", String(cnt)) +
+        gaugeLabels("agro_ec25", ec25, "time", "0", "measurement", String(cnt));
+        break;
+  }
 
-    for
-      each(auto time in time1v) {
-        double ec = 1000 / (time * K);
-        double ec25 = ec0 / (1 + TemperatureCoef * (temp - 25.0));
-        res += gaugeLabels("agro_resistance_raw", time, "time", "1",
-                           "measurement", String(cnt)) +
-               gaugeLabels("agro_ec", ec, "time", "1", "measurement",
-                           String(cnt)) +
-               gaugeLabels("agro_ec25", ec25, "time", "1", "measurement",
-                           String(cnt));
-      }
+  for (auto time: time1v) {
+    double ec = 1000 / (time * K);
+    double ec25 = ec / (1 + TemperatureCoef * (tempC - 25.0));
+    res +=
+        gaugeLabels("agro_resistance_raw", time, "time", "1", "measurement",
+                    String(cnt)) +
+        gaugeLabels("agro_ec", ec, "time", "1", "measurement", String(cnt)) +
+        gaugeLabels("agro_ec25", ec25, "time", "1", "measurement", String(cnt));
+        break;
+  }
 
-    res += gauge("agro_ec_temp", tempC);
+  res += gauge("agro_ec_temp", tempC);
 
-    return res;
+  return res;
 }
 
 String mcounter(const String &name, const float &value) {
@@ -187,6 +193,28 @@ void configModeCallback(WiFiManager *myWiFiManager) {
   Serial.println(myWiFiManager->getConfigPortalSSID());
   // entered config mode, make led toggle faster
   ticker.attach(0.2, tick);
+}
+
+
+String infoEsp(){
+  String res = "";
+  res += gauge("esp_vcc", ESP.getVcc()/1024.0);
+  res += gauge("esp_free_heap", ESP.getFreeHeap());
+  res += gauge("esp_chip_id", ESP.getChipId());
+  res += gauge("esp_boot_version", ESP.getBootVersion());
+  res += gauge("esp_boot_mode", ESP.getBootMode());
+  res += gauge("esp_cpu_freq_mhz", ESP.getCpuFreqMHz());
+  res += gauge("esp_flash_chip_id", ESP.getFlashChipId());
+  res += gauge("esp_flash_chip_real_size", ESP.getFlashChipRealSize());
+  res += gauge("esp_flash_chip_size", ESP.getFlashChipSize());
+  res += gauge("esp_flash_chip_speed", ESP.getFlashChipSpeed());
+  res += gauge("esp_flash_chip_size_by_chip_id", ESP.getFlashChipSizeByChipId());
+  res += gauge("esp_reset_reason", ESP.getResetInfoPtr()->reason);
+  res += gauge("esp_sketch_size", ESP.getSketchSize());
+  res += gauge("esp_sketch_free_space", ESP.getFreeSketchSpace());
+  res += mcounter("esp_cycle_count", ESP.getCycleCount());
+
+  return res;
 }
 
 void setupOta() {
@@ -309,6 +337,8 @@ void handleMetrics() {
     response += gauge("agro_gauge_raw1", tint.bytes[1]);
     response += gauge("agro_gauge_raw", tint.integer);
   }
+
+  response += infoEsp();
 
   response += "\n";
 
