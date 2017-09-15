@@ -10,12 +10,12 @@
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h>  //https://github.com/tzapu/WiFiManager
 
-#include <Wire.h>
+// #include <Wire.h>
 // for LED status
 #include <Ticker.h>
 Ticker ticker;
 
-#define BUILTIN_LED 1
+#define BUILTIN_LED 10
 
 void tick() {
   // toggle state
@@ -38,11 +38,10 @@ String gauge(const String &name, const double &value) {
   return res;
 }
 
-String gaugeLabels(const String &name, const double &value,
-                   const String &label0Name, const String &label0Value,
+String gaugeLabels(const String &name, const double &value, const String &label0Name, const String &label0Value,
                    const String &label1Name, const String &label1Value) {
-  return name + "{" + label0Name + "=\"" + label0Value + "\"," + label1Name +
-         "=\"" + label1Value + "\"} " + value + "\n";
+  return name + "{" + label0Name + "=\"" + label0Value + "\"," + label1Name + "=\"" + label1Value + "\"} " + value +
+         "\n";
 }
 
 void outputWrite(uint8_t pin, uint8_t val) {
@@ -53,7 +52,7 @@ void outputWrite(uint8_t pin, uint8_t val) {
 #include <DallasTemperature.h>
 #include <OneWire.h>
 
-#define ONE_WIRE_BUS 2
+#define ONE_WIRE_BUS 1
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just
 // Maxim/Dallas temperature ICs)
@@ -65,7 +64,7 @@ DeviceAddress insideThermometer;
 
 void setupDallas() {
   sensors.begin();
-  sensors.getAddress(insideThermometer, 0);
+  sensors.getAdxdress(insideThermometer, 0);
 }
 
 String temperature() { return ""; }
@@ -83,10 +82,8 @@ float getTemperature() {
 #define C_P 0
 #define C_M 2
 
-float TemperatureCoef =
-    0.019;  // this changes depending on what chemical we are measuring
+float TemperatureCoef = 0.019;  // this changes depending on what chemical we are measuring
 float K = 10.0;
-
 
 String fancy_ec() {
   String res = "";
@@ -115,7 +112,7 @@ String fancy_ec() {
     outputWrite(C_M, HIGH);
 
     // second measurement
-    delayMicroseconds(2);
+    delayMicroseconds(100);
 
     digitalWrite(C_P, LOW);
     delayMicroseconds(100);
@@ -124,13 +121,14 @@ String fancy_ec() {
     outputWrite(EC, HIGH);
 
     unsigned long time1 = 0;
+
     while (++time1 < 5000 && digitalRead(C_P) != HIGH) {
     }
 
-    pinMode(EC, INPUT);
+    pinMode(EC, LOW);
     outputWrite(C_P, LOW);
     outputWrite(C_M, LOW);
-    delayMicroseconds(2);
+    delayMicroseconds(10 0);
 
     time0v.push_back(time0);
     time1v.push_back(time1);
@@ -140,33 +138,30 @@ String fancy_ec() {
   res += gauge("agro_ec_frequency", 1.0 / (timeElapsed / 16.0));
 
   float tempC = (getTemperature() + tempStart) / 2.0;
-  tempC = 25;
+  // tempC = 25;
   int cnt = 0;
 
   res += gaugeType("agro_resistance_raw");
   res += gaugeType("agro_ec");
   res += gaugeType("agro_ec25");
 
-  for (auto time: time0v) {
+  for (auto time : time0v) {
     double ec = 1000 / (time * K);
     double ec25 = ec / (1 + TemperatureCoef * (tempC - 25.0));
-    res +=
-        gaugeLabels("agro_resistance_raw", time, "time", "0", "measurement",
-                    String(cnt)) +
-        gaugeLabels("agro_ec", ec, "time", "0", "measurement", String(cnt)) +
-        gaugeLabels("agro_ec25", ec25, "time", "0", "measurement", String(cnt));
-        break;
+    res += gaugeLabels("agro_resistance_raw", time, "time", "0", "measurement", String(cnt)) +
+           gaugeLabels("agro_ec", ec, "time", "0", "measurement", String(cnt)) +
+           gaugeLabels("agro_ec25", ec25, "time", "0", "measurement", String(cnt));
+    cnt++;
   }
 
-  for (auto time: time1v) {
+  cnt = 0;
+  for (auto time : time1v) {
     double ec = 1000 / (time * K);
     double ec25 = ec / (1 + TemperatureCoef * (tempC - 25.0));
-    res +=
-        gaugeLabels("agro_resistance_raw", time, "time", "1", "measurement",
-                    String(cnt)) +
-        gaugeLabels("agro_ec", ec, "time", "1", "measurement", String(cnt)) +
-        gaugeLabels("agro_ec25", ec25, "time", "1", "measurement", String(cnt));
-        break;
+    res += gaugeLabels("agro_resistance_raw", time, "time", "1", "measurement", String(cnt)) +
+           gaugeLabels("agro_ec", ec, "time", "1", "measurement", String(cnt)) +
+           gaugeLabels("agro_ec25", ec25, "time", "1", "measurement", String(cnt));
+    cnt++;
   }
 
   res += gauge("agro_ec_temp", tempC);
@@ -195,10 +190,9 @@ void configModeCallback(WiFiManager *myWiFiManager) {
   ticker.attach(0.2, tick);
 }
 
-
-String infoEsp(){
+String infoEsp() {
   String res = "";
-  res += gauge("esp_vcc", ESP.getVcc()/1024.0);
+  res += gauge("esp_vcc", ESP.getVcc() / 1024.0);
   res += gauge("esp_free_heap", ESP.getFreeHeap());
   res += gauge("esp_chip_id", ESP.getChipId());
   res += gauge("esp_boot_version", ESP.getBootVersion());
@@ -229,9 +223,8 @@ void setupOta() {
 
   ArduinoOTA.onStart([]() { Serial.println("Start"); });
   ArduinoOTA.onEnd([]() { Serial.println("\nEnd"); });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  });
+  ArduinoOTA.onProgress(
+      [](unsigned int progress, unsigned int total) { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); });
   ArduinoOTA.onError([](ota_error_t error) {
     Serial.printf("Error[%u]: ", error);
     if (error == OTA_AUTH_ERROR)
@@ -255,19 +248,22 @@ void setupWifiManager() {
   ticker.attach(0.6, tick);
 
   // WiFiManager
-  // Local intialization. Once its business is done, there is no need to keep it
+  // Local intialization. Once its business is done, there is no need to
+  // keep it
   // around
   WiFiManager wifiManager;
   // reset settings - for testing
   //  wifiManager.resetSettings();
   // littlePonny
 
-  // set callback that gets called when connecting to previous WiFi fails, and
+  // set callback that gets called when connecting to previous WiFi fails,
+  // and
   // enters Access Point mode
   wifiManager.setAPCallback(configModeCallback);
 
   // fetches ssid and pass and tries to connect
-  // if it does not connect it starts an access point with the specified name
+  // if it does not connect it starts an access point with the specified
+  // name
   // here  "AutoConnectAP"
   // and goes into a blocking loop awaiting configuration
   if (!wifiManager.autoConnect()) {
@@ -299,56 +295,62 @@ union {
 } tint;
 
 void setupWire() {
-  // Wire.begin(2, 0);
-  Wire.begin();
-  Wire.setClockStretchLimit(15000);
-  // delay(1000);
-  uint8_t cmd = 0b00010000;
+  // // Wire.begin(2, 0);
+  // Wire.begin();
+  // Wire.setClockStretchLimit(15000);
+  // // delay(1000);
+  // uint8_t cmd = 0b00010000;
 
-  Wire.beginTransmission(121);
-  Wire.write(cmd);
-  Wire.endTransmission();
+  // Wire.beginTransmission(121);
+  // Wire.write(cmd);
+  // Wire.endTransmission();
+}
+
+String searchOneWire() {
+  byte i;
+  byte present = 0;
+  byte data[12];
+  byte addr[8];
+
+  String ret = "";
+  ret += ("Looking for 1-Wire devices...\n\r");
+  while (oneWire.search(addr)) {
+    ret += ("\n\rFound \'1-Wire\' device with address:\n\r");
+    for (i = 0; i < 8; i++) {
+      ret += ("0x");
+      if (addr[i] < 16) {
+        ret += ('0');
+      }
+      Serial.print(addr[i], HEX);
+      if (i < 7) {
+        ret += (", ");
+      }
+    }
+    if (OneWire::crc8(addr, 7) != addr[7]) {
+      return "CRC is not valid!\n";
+    }
+  }
+  ret += ("\n\r\n\rThat's it.\r\n");
+  oneWire.reset_search();
+  return ret;
 }
 
 void handleMetrics() {
-  digitalWrite(BUILTIN_LED, 1);
   String response = "";
 
   response += fancy_ec();
   response += temperature();
-  response += mcounter("agro_counter_raw", interruptCounter);
-  uint8_t cmd = 0b00010000;
-  // Serial.write(String(cmd, HEX));
-
-  Wire.beginTransmission(121);
-  Wire.write(cmd);
-  Wire.endTransmission();
-
-  Wire.beginTransmission(121);
-  Wire.write((0b0001 << 8) | 0);
-  Wire.endTransmission();
-
-  int num = Wire.requestFrom(121, 2);
-
-  if (num == 2) {
-    tint.bytes[0] = Wire.read();
-    tint.bytes[1] = Wire.read();
-    response += gauge("agro_gauge_raw0", tint.bytes[0]);
-    response += gauge("agro_gauge_raw1", tint.bytes[1]);
-    response += gauge("agro_gauge_raw", tint.integer);
-  }
-
   response += infoEsp();
 
   response += "\n";
 
   server.send(200, "text/plain", response);
-
-  digitalWrite(BUILTIN_LED, 0);
 }
 
+void oneWireSearchEndpoint() { server.send(200, "text/plain", searchOneWire()); }
+
 void setup() {
-  Serial.begin(115200);
+  // Serial.begin(115200);
   // set led pin as output
   pinMode(BUILTIN_LED, OUTPUT);
   // pinMode(4, INPUT_PULLUP);
@@ -369,6 +371,7 @@ void setup() {
 
   Serial.println(WiFi.localIP());
   server.on("/metrics", handleMetrics);
+  server.on("/onewire", oneWireSearchEndpoint);
 
   server.begin();
   setupWire();
