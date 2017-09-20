@@ -2,7 +2,11 @@
 #include <string>
 #include <vector>
 
+class Metric;
+class Gauge;
+
 class Registry {
+ public:
   typedef std::map<std::string, const std::string> LabelsMap;
 
  private:
@@ -10,8 +14,8 @@ class Registry {
 
  public:
   Registry(){};
-  const &Gauge gauge(const std::string &name, const LabelsMap &map);
-  const &Gauge gauge(const std::string &name);
+  const Gauge &gauge(const std::string &name, const LabelsMap &map);
+  const Gauge &gauge(const std::string &name);
 };
 
 class Metric {
@@ -26,6 +30,6 @@ class Metric {
 
 class Gauge : public Metric {
   void set(double value);
-}
+};
 
 extern Registry Prometheus;
