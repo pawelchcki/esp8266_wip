@@ -38,10 +38,11 @@ String gauge(const String &name, const double &value) {
   return res;
 }
 
-String gaugeLabels(const String &name, const double &value, const String &label0Name, const String &label0Value,
+String gaugeLabels(const String &name, const double &value,
+                   const String &label0Name, const String &label0Value,
                    const String &label1Name, const String &label1Value) {
-  return name + "{" + label0Name + "=\"" + label0Value + "\"," + label1Name + "=\"" + label1Value + "\"} " + value +
-         "\n";
+  return name + "{" + label0Name + "=\"" + label0Value + "\"," + label1Name +
+         "=\"" + label1Value + "\"} " + value + "\n";
 }
 
 void outputWrite(uint8_t pin, uint8_t val) {
@@ -64,7 +65,7 @@ DeviceAddress insideThermometer;
 
 void setupDallas() {
   sensors.begin();
-  sensors.getAdxdress(insideThermometer, 0);
+  sensors.getAddress(insideThermometer, 0);
 }
 
 String temperature() { return ""; }
@@ -82,7 +83,8 @@ float getTemperature() {
 #define C_P 0
 #define C_M 2
 
-float TemperatureCoef = 0.019;  // this changes depending on what chemical we are measuring
+float TemperatureCoef =
+    0.019;  // this changes depending on what chemical we are measuring
 float K = 10.0;
 
 String fancy_ec() {
@@ -128,7 +130,7 @@ String fancy_ec() {
     pinMode(EC, LOW);
     outputWrite(C_P, LOW);
     outputWrite(C_M, LOW);
-    delayMicroseconds(10 0);
+    delayMicroseconds(100);
 
     time0v.push_back(time0);
     time1v.push_back(time1);
@@ -148,9 +150,11 @@ String fancy_ec() {
   for (auto time : time0v) {
     double ec = 1000 / (time * K);
     double ec25 = ec / (1 + TemperatureCoef * (tempC - 25.0));
-    res += gaugeLabels("agro_resistance_raw", time, "time", "0", "measurement", String(cnt)) +
-           gaugeLabels("agro_ec", ec, "time", "0", "measurement", String(cnt)) +
-           gaugeLabels("agro_ec25", ec25, "time", "0", "measurement", String(cnt));
+    res +=
+        gaugeLabels("agro_resistance_raw", time, "time", "0", "measurement",
+                    String(cnt)) +
+        gaugeLabels("agro_ec", ec, "time", "0", "measurement", String(cnt)) +
+        gaugeLabels("agro_ec25", ec25, "time", "0", "measurement", String(cnt));
     cnt++;
   }
 
@@ -158,9 +162,11 @@ String fancy_ec() {
   for (auto time : time1v) {
     double ec = 1000 / (time * K);
     double ec25 = ec / (1 + TemperatureCoef * (tempC - 25.0));
-    res += gaugeLabels("agro_resistance_raw", time, "time", "1", "measurement", String(cnt)) +
-           gaugeLabels("agro_ec", ec, "time", "1", "measurement", String(cnt)) +
-           gaugeLabels("agro_ec25", ec25, "time", "1", "measurement", String(cnt));
+    res +=
+        gaugeLabels("agro_resistance_raw", time, "time", "1", "measurement",
+                    String(cnt)) +
+        gaugeLabels("agro_ec", ec, "time", "1", "measurement", String(cnt)) +
+        gaugeLabels("agro_ec25", ec25, "time", "1", "measurement", String(cnt));
     cnt++;
   }
 
@@ -202,7 +208,8 @@ String infoEsp() {
   res += gauge("esp_flash_chip_real_size", ESP.getFlashChipRealSize());
   res += gauge("esp_flash_chip_size", ESP.getFlashChipSize());
   res += gauge("esp_flash_chip_speed", ESP.getFlashChipSpeed());
-  res += gauge("esp_flash_chip_size_by_chip_id", ESP.getFlashChipSizeByChipId());
+  res +=
+      gauge("esp_flash_chip_size_by_chip_id", ESP.getFlashChipSizeByChipId());
   res += gauge("esp_reset_reason", ESP.getResetInfoPtr()->reason);
   res += gauge("esp_sketch_size", ESP.getSketchSize());
   res += gauge("esp_sketch_free_space", ESP.getFreeSketchSpace());
@@ -223,8 +230,9 @@ void setupOta() {
 
   ArduinoOTA.onStart([]() { Serial.println("Start"); });
   ArduinoOTA.onEnd([]() { Serial.println("\nEnd"); });
-  ArduinoOTA.onProgress(
-      [](unsigned int progress, unsigned int total) { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
   ArduinoOTA.onError([](ota_error_t error) {
     Serial.printf("Error[%u]: ", error);
     if (error == OTA_AUTH_ERROR)
@@ -347,7 +355,9 @@ void handleMetrics() {
   server.send(200, "text/plain", response);
 }
 
-void oneWireSearchEndpoint() { server.send(200, "text/plain", searchOneWire()); }
+void oneWireSearchEndpoint() {
+  server.send(200, "text/plain", searchOneWire());
+}
 
 void setup() {
   // Serial.begin(115200);
