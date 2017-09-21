@@ -6,8 +6,8 @@
             "request": "launch",
             "cwd": "${workspaceRoot}",
             "name": "PlatformIO Debugger",
-            "target": "c:/Users/Jakub/Documents/PlatformIO/Projects/esp8266_wip/.pioenvs/esp8285/firmware.elf",
-            "gdbpath": "C:/Users/Jakub/.platformio/penv/Scripts/piodebuggdb",
+            "target": "/Users/pawel/Documents/PlatformIO/Projects/170909-233504-esp8285/.pioenvs/esp8285/firmware.elf",
+            "gdbpath": "/Users/pawel/.platformio/penv/bin/piodebuggdb",
             "autorun": [ "source .pioinit" ]
         }
     ]

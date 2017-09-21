@@ -14,21 +14,24 @@ class Registry {
 
  public:
   Registry(){};
-  const Gauge &gauge(const std::string &name, const LabelsMap &map);
-  const Gauge &gauge(const std::string &name);
+  const Gauge &gauge(const std::string &name, const std::string &description, const LabelsMap &map);
+  const Gauge &gauge(const std::string &name, const std::string &description);
 };
 
 class Metric {
-  Metric(const Registry::LabelsMap &labelsMap);
-
  private:
   const Registry::LabelsMap labelsMap;
 
  public:
+  Metric(const std::string &description, const Registry::LabelsMap &labelsMap);  
   double get();
 };
 
 class Gauge : public Metric {
+public:
+  Gauge(const Gauge&) = delete;
+  Gauge(Gauge&&) = delete;
+  Gauge();
   void set(double value);
 };
 

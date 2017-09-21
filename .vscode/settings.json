@@ -25,6 +25,7 @@
         "new": "cpp",
         "stdexcept": "cpp",
         "type_traits": "cpp",
-        "vector": "cpp"
+        "vector": "cpp",
+        "typeindex": "cpp"
     }
 }
