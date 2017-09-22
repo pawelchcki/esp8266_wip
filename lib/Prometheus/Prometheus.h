@@ -14,12 +14,10 @@ class Registry {
 
  public:
   Registry(){};
-  const Gauge &gauge(const std::string &name, const std::string &description,
-                     const LabelsMap &map);
+  const Gauge &gauge(const std::string &name, const std::string &description, const LabelsMap &map);
   const Gauge &gauge(const std::string &name, const std::string &description);
 
-  const Gauge &counter(const std::string &name, const std::string &description,
-                       const LabelsMap &map);
+  const Gauge &counter(const std::string &name, const std::string &description, const LabelsMap &map);
   const Gauge &counter(const std::string &name, const std::string &description);
 };
 
@@ -32,11 +30,8 @@ class Metric {
   Metric(const Metric &) = delete;
   Metric(Metric &&) = delete;
 
-  virtual const std::tuple<std::string, std::string, std::string>>
-      &getNameTypeDescription() = 0;
-  virtual const std::vector<
-      std::tuple<std::string, Registry::LabelsMap, double>>
-      &getValues() = 0;
+  // TODO: refactor it to something better
+  virtual const std::string &represent() = 0;
 };
 
 class Gauge : public Metric {
