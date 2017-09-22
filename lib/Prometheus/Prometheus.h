@@ -14,25 +14,48 @@ class Registry {
 
  public:
   Registry(){};
-  const Gauge &gauge(const std::string &name, const std::string &description, const LabelsMap &map);
+  const Gauge &gauge(const std::string &name, const std::string &description,
+                     const LabelsMap &map);
   const Gauge &gauge(const std::string &name, const std::string &description);
+
+  const Gauge &counter(const std::string &name, const std::string &description,
+                       const LabelsMap &map);
+  const Gauge &counter(const std::string &name, const std::string &description);
 };
 
 class Metric {
- private:
+ protected:
   const Registry::LabelsMap labelsMap;
 
  public:
-  Metric(const std::string &description, const Registry::LabelsMap &labelsMap);  
-  double get();
+  Metric(const std::string &description, const Registry::LabelsMap &labelsMap);
+  Metric(const Metric &) = delete;
+  Metric(Metric &&) = delete;
+
+  virtual const std::tuple<std::string, std::string, std::string>>
+      &getNameTypeDescription() = 0;
+  virtual const std::vector<
+      std::tuple<std::string, Registry::LabelsMap, double>>
+      &getValues() = 0;
 };
 
 class Gauge : public Metric {
-public:
-  Gauge(const Gauge&) = delete;
-  Gauge(Gauge&&) = delete;
-  Gauge();
+ protected:
+  double value;
+
+ public:
+  double get() { return value; };
   void set(double value);
 };
+
+class Coutner : public Metric {
+ protected:
+  double count = 0;
+
+ public:
+  double get() { return count; };
+  void increment();
+  void increment(double inc);
+}
 
 extern Registry Prometheus;
