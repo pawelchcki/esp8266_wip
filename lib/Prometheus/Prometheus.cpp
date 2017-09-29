@@ -1,10 +1,11 @@
 #include "Prometheus.h"
 
-const Gauge &Registry::gauge(const std::string &name, const std::string &desc, const LabelsMap &map) {
+const Gauge &Registry::gauge(const std::string &name, const std::string &desc, const LabelsAllowed &labels) {
   auto i = this->metrics.find(name);
   if (i == this->metrics.end()) {
     return static_cast<Gauge &>(
-        this->metrics.emplace(std::piecewise_construct, std::forward_as_tuple(name), std::forward_as_tuple(desc, map))
+        this->metrics
+            .emplace(std::piecewise_construct, std::forward_as_tuple(name), std::forward_as_tuple(desc, labels))
             .first->second);
   } else {
     return static_cast<Gauge &>(i->second);
