@@ -9,7 +9,7 @@ class Counter;
 class Registry {
  public:
   typedef std::map<std::string, const std::string> LabelsMap;
-  typedef std::vector<std::string> LabelsAllowed;
+  typedef std::vector<std::string> LabelsRequired;
 
   // TODO: make into a template to possibly help implement Histograms and summaries
 
@@ -18,11 +18,11 @@ class Registry {
 
  public:
   Registry(){};
-  const Gauge &gauge(const std::string &name, const std::string &description, const LabelsAllowed &labels);
+  const Gauge &gauge(const std::string &name, const std::string &description, const LabelsRequired &labels);
 
   const Gauge &gauge(const std::string &name, const std::string &description);
 
-  const Counter &counter(const std::string &name, const std::string &description, const LabelsAllowed &labels);
+  const Counter &counter(const std::string &name, const std::string &description, const LabelsRequired &labels);
   const Counter &counter(const std::string &name, const std::string &description);
 };
 
@@ -30,12 +30,15 @@ class Metric {
   // typedef std::map<LabelsMap, T> LabelsValueMap<T>;
 
  protected:
+  const std::string description;
+  const std::string name;
+  const Registry::LabelsRequired requiredLabels;
+
   const Registry::LabelsMap labelsMap;
   std::string labelsRepresent();
 
  public:
-  Metric(const std::string &description, const Registry::LabelsMap &labelsMap);
-  Metric(const std::string &description, const Registry::LabelsAllowed &labels);
+  Metric(const std::string &name, const std::string &description, const Registry::LabelsRequired &labels);
   Metric(const Metric &) = delete;
   Metric(Metric &&) = delete;
 
@@ -43,11 +46,12 @@ class Metric {
   virtual std::string represent() { return ""; };
 };
 
-class Gauge : public Metric {
+class Gauge : public Metric {  
  protected:
+  std::map<Registry::LabelsMap, double> values;
   double value;
 
- public:
+ public:  
   double get() { return value; };
   void set(double value);
 
