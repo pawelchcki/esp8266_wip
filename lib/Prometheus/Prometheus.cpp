@@ -1,4 +1,5 @@
 #include "Prometheus.h"
+#include <algorithm>
 
 const Gauge &Registry::gauge(const std::string &name, const std::string &desc, const LabelsRequired &labels) {
   auto i = this->metrics.find(name);
@@ -38,8 +39,34 @@ std::string Metric::labelsRepresent() {
 
 std::string Gauge::represent() { return ""; };
 
-Metric::Metric(const std::string &name, const std::string &description, const Registry::LabelsRequired &labels) : name(name), description(description), requiredLabels(labels) {
+Metric::Metric(const std::string &name, const std::string &description, const Registry::LabelsRequired &labels) : name(name), description(description), requiredLabels(labels) {};
 
+bool Metric::keyAllowed(const std::string &key){
+  //TODO: make this faster than O(n)
+  return std::find(this->requiredLabels.start(), this->requiredLabels.end(), key) != this->requiredLabels.end();
+}
+
+Gauge::Gauge(const std::string &name, const std::string &description, const Registry::LabelsRequired &labels) : Metric(name, description, labels){
+  if (labels.size() > 0) {  
+    for(auto const& label: labels){
+      this->defaultLabels[label] = "";    
+    }
+  }
 };
+
+const Gauge & Gauge::setDefaultLabels(const Registry::LabelsRequired &defaultLabels){
+  // TODO: handle errors.
+  this->defaultLabels = defaultLabels;
+  return this;
+}
+
+double Gauge::get() {  
+  return this->values[defaultLabels];
+}
+
+void Gauge::set(double value){
+  this->values[defaultLabels] = value;
+}
+
 
 // const std::string &Counter::represent() { return std""; };

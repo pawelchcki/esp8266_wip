@@ -36,6 +36,7 @@ class Metric {
 
   const Registry::LabelsMap labelsMap;
   std::string labelsRepresent();
+  bool keyAllowed(const std::string &key);
 
  public:
   Metric(const std::string &name, const std::string &description, const Registry::LabelsRequired &labels);
@@ -49,13 +50,15 @@ class Metric {
 class Gauge : public Metric {  
  protected:
   std::map<Registry::LabelsMap, double> values;
-  double value;
+  Registry::LabelsMap defaultLabels;  
 
  public:  
-  double get() { return value; };
+  const Gauge & setDefaultLabels(const Registry::LabelsRequired &defaultLabels);
+  double get();
   void set(double value);
 
   std::string represent() override;
+ 
 };
 
 class Counter : public Metric {
