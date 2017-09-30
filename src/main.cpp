@@ -1,3 +1,4 @@
+#ifndef UNIT_TEST
 #include <vector>
 
 #include <ArduinoOTA.h>
@@ -384,3 +385,4 @@ void loop() {
   server.handleClient();
   ArduinoOTA.handle();
 }
+#endif
