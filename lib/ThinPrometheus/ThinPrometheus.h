@@ -14,7 +14,7 @@ class GaugeCounter {
     std::map<LabelsMap, double> values;
 
 private:
-    std::string stringifyLabels(const LabelsMap &labels ){
+    std::string stringifyLabels(const LabelsMap &labels) const {
         if (labels.size() == 0){
             return "";
         }
@@ -32,7 +32,7 @@ private:
         return rv;
     }
 
-    std::string toString(double value) {
+    std::string toString(double value) const {
         std::ostringstream stream;
         stream << value;
         return stream.str();
@@ -50,7 +50,7 @@ public:
     void set(double value) {  this->values[defaultLabels] = value; };
     void increase(double value) {  this->values[defaultLabels] += value; };
 
-    std::string represent(){
+    std::string represent() const {
         std::string rv;
         rv.reserve(20000);
         rv += std::string("# HELP ") + this->name + std::string(" ") + this->description + std::string("\n");        
@@ -89,5 +89,15 @@ public:
 
     const GaugeCounter &gauge(const std::string &name, const std::string &desc){
         return counterGauge(name, desc, "gauge");
+    };
+
+    std::string represent() const {
+        std::string rv;
+        rv.reserve(100000);
+        for (const auto &metric: metrics) {
+            rv += metric.second.represent();
+        }
+        rv.shrink_to_fit();
+        return rv;
     };
 };
