@@ -10,7 +10,7 @@
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h>  //https://github.com/tzapu/WiFiManager
 
-#include <Prometheus.h>
+#include <ThinPrometheus.h>
 
 // #include <Wire.h>
 // for LED status
