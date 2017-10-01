@@ -59,18 +59,15 @@ void test_default_labels_can_be_changed(void) {
 
 // TODO: test_gauge_can_not_have_different_set_of_labels
 
-int main(int argc, char **argv) {
+void runner_test_gauge_counter(){
     UNITY_BEGIN();
-   
-    RUN_TEST(test_gauge_is_created_and_can_produce_simple_representation);
-    RUN_TEST(test_gauge_defaults_to_0);
-    RUN_TEST(test_gauge_increments_by_set_amount);
-    RUN_TEST(test_gauge_can_have_labels);
-    RUN_TEST(test_default_labels_can_be_changed);
-
-    UNITY_END();
-
-    return 0;
+    
+     RUN_TEST(test_gauge_is_created_and_can_produce_simple_representation);
+     RUN_TEST(test_gauge_defaults_to_0);
+     RUN_TEST(test_gauge_increments_by_set_amount);
+     RUN_TEST(test_gauge_can_have_labels);
+     RUN_TEST(test_default_labels_can_be_changed);
+ 
+     UNITY_END();
 }
-
 #endif

@@ -74,9 +74,9 @@ public:
 };
 
 class Registry {
-    std::map<std::string, const GaugeCounter> metrics;
+    std::map<std::string, GaugeCounter> metrics;
 
-    const GaugeCounter &counterGauge(const std::string &name, const std::string &desc, const std::string &type, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap) {
+    GaugeCounter &counterGauge(const std::string &name, const std::string &desc, const std::string &type, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap) {
         auto i = this->metrics.find(name);
         if (i == this->metrics.end()) {
             return this->metrics
@@ -88,19 +88,19 @@ class Registry {
     };
 
 public:
-    const GaugeCounter &counter(const std::string &name, const std::string &desc){
+    GaugeCounter &counter(const std::string &name, const std::string &desc){
         return counterGauge(name, desc, "counter", std::vector<std::string>{}, GaugeCounter::LabelsMap{});
     };
 
-    const GaugeCounter &gauge(const std::string &name, const std::string &desc){
+    GaugeCounter &gauge(const std::string &name, const std::string &desc){
         return counterGauge(name, desc, "gauge", std::vector<std::string>{}, GaugeCounter::LabelsMap{});
     };
 
-    const GaugeCounter &counter(const std::string &name, const std::string &desc, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap){
+    GaugeCounter &counter(const std::string &name, const std::string &desc, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap){
         return counterGauge(name, desc, "counter", requiredLabels, labelsMap);
     };
 
-    const GaugeCounter &gauge(const std::string &name, const std::string &desc, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap){
+    GaugeCounter &gauge(const std::string &name, const std::string &desc, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap){
         return counterGauge(name, desc, "gauge", requiredLabels, labelsMap);
     };
 
