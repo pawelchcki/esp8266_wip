@@ -12,8 +12,8 @@ private:
     const std::string description;    
     const std::string type;
     
-    std::map<LabelsMap, double> values;
-    LabelsMap defaultLabels;    
+    mutable std::map<LabelsMap, double> values;
+    mutable LabelsMap defaultLabels; // TODO: could this be const ?
 
     std::string stringifyLabels(const LabelsMap &labels) const {
         if (labels.size() == 0){
@@ -47,13 +47,15 @@ public:
         const LabelsMap &defaultLabels ) 
         : name(name), description(description), type(type), defaultLabels(defaultLabels) {};
 
-    double get(const LabelsMap &labels) { return this->values[labels]; };
-    void set(const LabelsMap &labels, double value) {  this->values[labels] = value; };
-    void increment(const LabelsMap &labels, double value) {  this->values[labels] += value; }; 
+    double get(const LabelsMap &labels) const { return this->values[labels]; };
+
+    // THIS CONST IS A LIE, but maybe it gives better API ?
+    void set(const LabelsMap &labels, double value) const {  this->values[labels] = value; };
+    void increment(const LabelsMap &labels, double value) const {  this->values[labels] += value; }; 
     
-    double get() { return  this->values[defaultLabels]; };
-    void set(double value) {  this->values[defaultLabels] = value; };
-    void increment(double value) {  this->values[defaultLabels] += value; };
+    double get() const { return  this->values[defaultLabels]; };
+    void set(double value) const {  this->values[defaultLabels] = value; }; 
+    void increment(double value) const {  this->values[defaultLabels] += value; };
 
     std::string represent() const {
         std::string rv;
@@ -74,9 +76,9 @@ public:
 };
 
 class Registry {
-    std::map<std::string, GaugeCounter> metrics;
+    std::map<std::string, const GaugeCounter> metrics;
 
-    GaugeCounter &counterGauge(const std::string &name, const std::string &desc, const std::string &type, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap) {
+    const GaugeCounter &counterGauge(const std::string &name, const std::string &desc, const std::string &type, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap) {
         auto i = this->metrics.find(name);
         if (i == this->metrics.end()) {
             return this->metrics
@@ -88,19 +90,19 @@ class Registry {
     };
 
 public:
-    GaugeCounter &counter(const std::string &name, const std::string &desc){
+    const GaugeCounter &counter(const std::string &name, const std::string &desc){
         return counterGauge(name, desc, "counter", std::vector<std::string>{}, GaugeCounter::LabelsMap{});
     };
 
-    GaugeCounter &gauge(const std::string &name, const std::string &desc){
+    const GaugeCounter &gauge(const std::string &name, const std::string &desc){
         return counterGauge(name, desc, "gauge", std::vector<std::string>{}, GaugeCounter::LabelsMap{});
     };
 
-    GaugeCounter &counter(const std::string &name, const std::string &desc, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap){
+    const GaugeCounter &counter(const std::string &name, const std::string &desc, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap){
         return counterGauge(name, desc, "counter", requiredLabels, labelsMap);
     };
 
-    GaugeCounter &gauge(const std::string &name, const std::string &desc, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap){
+    const GaugeCounter &gauge(const std::string &name, const std::string &desc, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap){
         return counterGauge(name, desc, "gauge", requiredLabels, labelsMap);
     };
 
