@@ -3,17 +3,18 @@
 #include <sstream>
 #include <vector>
 
-class GaugeCounter {
+class GaugeCounter {    
+public:
     typedef std::map<std::string, const std::string> LabelsMap;
     
+private:
     const std::string name;
     const std::string description;    
     const std::string type;
     
-    LabelsMap defaultLabels;
     std::map<LabelsMap, double> values;
+    LabelsMap defaultLabels;    
 
-private:
     std::string stringifyLabels(const LabelsMap &labels) const {
         if (labels.size() == 0){
             return "";
@@ -38,17 +39,21 @@ private:
         return stream.str();
     }
     
-public:
-    GaugeCounter(const std::string &name, const std::string &description, const std::string &type) : name(name), description(description), type(type) {};
-
+public:    
+    GaugeCounter(const std::string &name,
+        const std::string &description, 
+        const std::string &type, 
+        const std::vector<std::string> &requiredLabels, //TODO: implement required label names to safeguard against differing label sets
+        const LabelsMap &defaultLabels ) 
+        : name(name), description(description), type(type), defaultLabels(defaultLabels) {};
 
     double get(const LabelsMap &labels) { return this->values[labels]; };
     void set(const LabelsMap &labels, double value) {  this->values[labels] = value; };
-    void increase(const LabelsMap &labels, double value) {  this->values[labels] += value; }; 
+    void increment(const LabelsMap &labels, double value) {  this->values[labels] += value; }; 
     
     double get() { return  this->values[defaultLabels]; };
     void set(double value) {  this->values[defaultLabels] = value; };
-    void increase(double value) {  this->values[defaultLabels] += value; };
+    void increment(double value) {  this->values[defaultLabels] += value; };
 
     std::string represent() const {
         std::string rv;
@@ -71,11 +76,11 @@ public:
 class Registry {
     std::map<std::string, const GaugeCounter> metrics;
 
-    const GaugeCounter &counterGauge(const std::string &name, const std::string &desc, const std::string &type) {
+    const GaugeCounter &counterGauge(const std::string &name, const std::string &desc, const std::string &type, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap) {
         auto i = this->metrics.find(name);
         if (i == this->metrics.end()) {
             return this->metrics
-                    .emplace(std::piecewise_construct, std::forward_as_tuple(name), std::forward_as_tuple(name, desc, type))
+                    .emplace(std::piecewise_construct, std::forward_as_tuple(name), std::forward_as_tuple(name, desc, type, requiredLabels, labelsMap))
                     .first->second;
         } else {
             return i->second;
@@ -84,11 +89,19 @@ class Registry {
 
 public:
     const GaugeCounter &counter(const std::string &name, const std::string &desc){
-        return counterGauge(name, desc, "counter");
+        return counterGauge(name, desc, "counter", std::vector<std::string>{}, GaugeCounter::LabelsMap{});
     };
 
     const GaugeCounter &gauge(const std::string &name, const std::string &desc){
-        return counterGauge(name, desc, "gauge");
+        return counterGauge(name, desc, "gauge", std::vector<std::string>{}, GaugeCounter::LabelsMap{});
+    };
+
+    const GaugeCounter &counter(const std::string &name, const std::string &desc, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap){
+        return counterGauge(name, desc, "counter", requiredLabels, labelsMap);
+    };
+
+    const GaugeCounter &gauge(const std::string &name, const std::string &desc, const std::vector<std::string> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap){
+        return counterGauge(name, desc, "gauge", requiredLabels, labelsMap);
     };
 
     std::string represent() const {
