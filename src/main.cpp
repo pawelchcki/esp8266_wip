@@ -1,5 +1,6 @@
 #ifndef UNIT_TEST
 #include <vector>
+#include <string>
 
 #include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
@@ -87,6 +88,10 @@ float getTemperature() {
 
 float TemperatureCoef = 0.019;  // this changes depending on what chemical we are measuring
 float K = 10.0;
+
+Registry Prometheus;
+
+
 
 String fancy_ec() {
   String res = "";
@@ -193,25 +198,42 @@ void configModeCallback(WiFiManager *myWiFiManager) {
   ticker.attach(0.2, tick);
 }
 
-String infoEsp() {
-  String res = "";
-  res += gauge("esp_vcc", ESP.getVcc() / 1024.0);
-  res += gauge("esp_free_heap", ESP.getFreeHeap());
-  res += gauge("esp_chip_id", ESP.getChipId());
-  res += gauge("esp_boot_version", ESP.getBootVersion());
-  res += gauge("esp_boot_mode", ESP.getBootMode());
-  res += gauge("esp_cpu_freq_mhz", ESP.getCpuFreqMHz());
-  res += gauge("esp_flash_chip_id", ESP.getFlashChipId());
-  res += gauge("esp_flash_chip_real_size", ESP.getFlashChipRealSize());
-  res += gauge("esp_flash_chip_size", ESP.getFlashChipSize());
-  res += gauge("esp_flash_chip_speed", ESP.getFlashChipSpeed());
-  res += gauge("esp_flash_chip_size_by_chip_id", ESP.getFlashChipSizeByChipId());
-  res += gauge("esp_reset_reason", ESP.getResetInfoPtr()->reason);
-  res += gauge("esp_sketch_size", ESP.getSketchSize());
-  res += gauge("esp_sketch_free_space", ESP.getFreeSketchSpace());
-  res += mcounter("esp_cycle_count", ESP.getCycleCount());
+// static const auto &vcc = Prometheus.gauge("esp_vcc", "Voltage read if ADC is set to read VCC voltage");
 
-  return res;
+String infoEsp() {
+  static auto &vcc = Prometheus.gauge("esp_vcc", "Voltage reading if ADC is set to read VCC voltage");
+  static auto &freeHeap = Prometheus.gauge("esp_free_heap", "Free heap");
+  static auto &chipId = Prometheus.gauge("esp_chip_id", "ESP chip id");
+  static auto &bootVersion = Prometheus.gauge("esp_boot_version", "");
+  static auto &bootMode = Prometheus.gauge("esp_boot_mode", "");
+  static auto &cpuFreqMhz = Prometheus.gauge("esp_cpu_freq_mhz", "");
+  static auto &flashChipId = Prometheus.gauge("esp_flash_chip_id", "");
+  static auto &flashChipRealSize = Prometheus.gauge("esp_flash_chip_real_size", "");
+  static auto &flashChipSize = Prometheus.gauge("esp_flash_chip_size", "");
+  static auto &flashChipSpeed = Prometheus.gauge("esp_flash_chip_speed", "");
+  static auto &flashChipSizeByChipId = Prometheus.gauge("esp_flash_chip_size_by_chip_id", "");
+  static auto &resetReason = Prometheus.gauge("esp_reset_reason", "");
+  static auto &sketchSize = Prometheus.gauge("esp_sketch_size", "");
+  static auto &sketchFreeSpace = Prometheus.gauge("esp_sketch_free_space", "");
+  static auto &espCycleCount = Prometheus.counter("esp_cycle_total", "");
+
+  vcc.set(ESP.getVcc()/1024.0);
+  freeHeap.set(ESP.getFreeHeap());
+  chipId.set(ESP.getChipId());
+  bootVersion.set(ESP.getBootVersion());
+  bootMode.set(ESP.getBootMode());
+  cpuFreqMhz.set(ESP.getCpuFreqMHz());
+  flashChipId.set(ESP.getFlashChipId());
+  flashChipRealSize.set(ESP.getFlashChipRealSize());
+  flashChipSize.set(ESP.getFlashChipSize());
+  flashChipSpeed.set(ESP.getFlashChipSpeed());
+  flashChipSizeByChipId.set(ESP.getFlashChipSizeByChipId());
+  resetReason.set(ESP.getResetInfoPtr()->reason);
+  sketchSize.set(ESP.getSketchSize());
+  sketchFreeSpace.set(ESP.getFreeSketchSpace());
+  espCycleCount.set(ESP.getCycleCount());
+
+  return "";
 }
 
 void setupOta() {
@@ -345,7 +367,8 @@ void handleMetrics() {
   response += temperature();
   response += infoEsp();
 
-  response += "\n";
+  response += String(Prometheus.represent().c_str());
+  response += "\n"; // TODO: is this newline still needed ?
 
   server.send(200, "text/plain", response);
 }
