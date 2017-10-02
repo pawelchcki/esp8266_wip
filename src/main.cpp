@@ -16,8 +16,6 @@
 
 // #include <Wire.h>
 // for LED status
-#include <Ticker.h>
-Ticker ticker;
 
 #define BUILTIN_LED 10
 
@@ -194,44 +192,42 @@ void configModeCallback(WiFiManager *myWiFiManager) {
   Serial.println(WiFi.softAPIP());
   // if you used auto generated SSID, print it
   Serial.println(myWiFiManager->getConfigPortalSSID());
-  // entered config mode, make led toggle faster
-  ticker.attach(0.2, tick);
 }
 
 // static const auto &vcc = Prometheus.gauge("esp_vcc", "Voltage read if ADC is set to read VCC voltage");
 
 String infoEsp() {
-  static auto &vcc = Prometheus.gauge("esp_vcc", "Voltage reading if ADC is set to read VCC voltage");
-  static auto &freeHeap = Prometheus.gauge("esp_free_heap", "Free heap");
-  static auto &chipId = Prometheus.gauge("esp_chip_id", "ESP chip id");
-  static auto &bootVersion = Prometheus.gauge("esp_boot_version", "");
-  static auto &bootMode = Prometheus.gauge("esp_boot_mode", "");
-  static auto &cpuFreqMhz = Prometheus.gauge("esp_cpu_freq_mhz", "");
-  static auto &flashChipId = Prometheus.gauge("esp_flash_chip_id", "");
-  static auto &flashChipRealSize = Prometheus.gauge("esp_flash_chip_real_size", "");
-  static auto &flashChipSize = Prometheus.gauge("esp_flash_chip_size", "");
-  static auto &flashChipSpeed = Prometheus.gauge("esp_flash_chip_speed", "");
-  static auto &flashChipSizeByChipId = Prometheus.gauge("esp_flash_chip_size_by_chip_id", "");
-  static auto &resetReason = Prometheus.gauge("esp_reset_reason", "");
-  static auto &sketchSize = Prometheus.gauge("esp_sketch_size", "");
-  static auto &sketchFreeSpace = Prometheus.gauge("esp_sketch_free_space", "");
-  static auto &espCycleCount = Prometheus.counter("esp_cycle_total", "");
+  // static auto &vcc = Prometheus.gauge("esp_vcc", "Voltage reading if ADC is set to read VCC voltage");
+  // static auto &freeHeap = Prometheus.gauge("esp_free_heap", "Free heap");
+  // static auto &chipId = Prometheus.gauge("esp_chip_id", "ESP chip id");
+  // static auto &bootVersion = Prometheus.gauge("esp_boot_version", "");
+  // static auto &bootMode = Prometheus.gauge("esp_boot_mode", "");
+  // static auto &cpuFreqMhz = Prometheus.gauge("esp_cpu_freq_mhz", "");
+  // static auto &flashChipId = Prometheus.gauge("esp_flash_chip_id", "");
+  // static auto &flashChipRealSize = Prometheus.gauge("esp_flash_chip_real_size", "");
+  // static auto &flashChipSize = Prometheus.gauge("esp_flash_chip_size", "");
+  // static auto &flashChipSpeed = Prometheus.gauge("esp_flash_chip_speed", "");
+  // static auto &flashChipSizeByChipId = Prometheus.gauge("esp_flash_chip_size_by_chip_id", "");
+  // static auto &resetReason = Prometheus.gauge("esp_reset_reason", "");
+  // static auto &sketchSize = Prometheus.gauge("esp_sketch_size", "");
+  // static auto &sketchFreeSpace = Prometheus.gauge("esp_sketch_free_space", "");
+  // static auto &espCycleCount = Prometheus.counter("esp_cycle_total", "");
 
-  vcc.set(ESP.getVcc()/1024.0);
-  freeHeap.set(ESP.getFreeHeap());
-  chipId.set(ESP.getChipId());
-  bootVersion.set(ESP.getBootVersion());
-  bootMode.set(ESP.getBootMode());
-  cpuFreqMhz.set(ESP.getCpuFreqMHz());
-  flashChipId.set(ESP.getFlashChipId());
-  flashChipRealSize.set(ESP.getFlashChipRealSize());
-  flashChipSize.set(ESP.getFlashChipSize());
-  flashChipSpeed.set(ESP.getFlashChipSpeed());
-  flashChipSizeByChipId.set(ESP.getFlashChipSizeByChipId());
-  resetReason.set(ESP.getResetInfoPtr()->reason);
-  sketchSize.set(ESP.getSketchSize());
-  sketchFreeSpace.set(ESP.getFreeSketchSpace());
-  espCycleCount.set(ESP.getCycleCount());
+  // vcc.set(ESP.getVcc()/1024.0);
+  // freeHeap.set(ESP.getFreeHeap());
+  // chipId.set(ESP.getChipId());
+  // bootVersion.set(ESP.getBootVersion());
+  // bootMode.set(ESP.getBootMode());
+  // cpuFreqMhz.set(ESP.getCpuFreqMHz());
+  // flashChipId.set(ESP.getFlashChipId());
+  // flashChipRealSize.set(ESP.getFlashChipRealSize());
+  // flashChipSize.set(ESP.getFlashChipSize());
+  // flashChipSpeed.set(ESP.getFlashChipSpeed());
+  // flashChipSizeByChipId.set(ESP.getFlashChipSizeByChipId());
+  // resetReason.set(ESP.getResetInfoPtr()->reason);
+  // sketchSize.set(ESP.getSketchSize());
+  // sketchFreeSpace.set(ESP.getFreeSketchSpace());
+  // espCycleCount.set(ESP.getCycleCount());
 
   return "";
 }
@@ -269,8 +265,6 @@ void setupOta() {
 void setupWifiManager() {
   // set led pin as output
   pinMode(BUILTIN_LED, OUTPUT);
-  // start ticker with 0.5 because we start in AP mode and try to connect
-  ticker.attach(0.6, tick);
 
   // WiFiManager
   // Local intialization. Once its business is done, there is no need to
@@ -366,8 +360,9 @@ void handleMetrics() {
   response += fancy_ec();
   response += temperature();
   response += infoEsp();
+  CommonCollectors::collectEspInfo(Prometheus);
 
-  response += String(Prometheus.represent().c_str());
+  response += Prometheus.collectAndRepresent();
   response += "\n"; // TODO: is this newline still needed ?
 
   server.send(200, "text/plain", response);
@@ -376,6 +371,8 @@ void handleMetrics() {
 void oneWireSearchEndpoint() { server.send(200, "text/plain", searchOneWire()); }
 
 void setup() {
+  Prometheus.addCollector(CommonCollectors::collectEspInfo);
+
   // Serial.begin(115200);
   // set led pin as output
   pinMode(BUILTIN_LED, OUTPUT);
@@ -388,7 +385,6 @@ void setup() {
 
   // if you get here you have connected to the WiFi
   Serial.println("connected...yeey :)");
-  ticker.detach();
   // keep LED on
   digitalWrite(BUILTIN_LED, LOW);
 

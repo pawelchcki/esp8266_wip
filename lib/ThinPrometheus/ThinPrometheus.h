@@ -1,9 +1,10 @@
 #include <map>
 #include <vector>
+#include <functional>
 
 class GaugeCounter {    
 public:
-    typedef std::map<String, const String> LabelsMap;
+    typedef std::map<String, const String> LabelsMap;    
     
 private:
     const String name;
@@ -71,7 +72,9 @@ public:
 };
 
 class Registry {
+    typedef std::function<void(Registry&)> CollectorFunction;
     std::map<String, const GaugeCounter> metrics;
+    std::vector<CollectorFunction> collectorFunctions;
 
     const GaugeCounter &counterGauge(const String &name, const String &desc, const String &type, const std::vector<String> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap) {
         auto i = this->metrics.find(name);
@@ -107,11 +110,62 @@ public:
         return counterGauge(name, desc, "gauge", requiredLabels, labelsMap);
     };
 
+    void addCollector(CollectorFunction fn) {
+        collectorFunctions.push_back(fn);
+    }
+
+    void collect(){
+        for (const auto &fn: collectorFunctions){
+            std::bind(fn, this);
+        }
+    };
+
     String represent() const {
         String rv;
         for (const auto &metric: metrics) {
             rv += metric.second.represent();
         }
         return rv;
+    };
+
+    String collectAndRepresent() {
+        this->collect();
+        return this->represent();        
+    };
+};
+
+struct CommonCollectors {
+    static void collectEspInfo(Registry& registry) {
+        static auto &vcc = registry.gauge("esp_vcc", "Voltage reading if ADC is set to read VCC voltage");
+        static auto &freeHeap = registry.gauge("esp_free_heap", "Free heap");
+        static auto &chipId = registry.gauge("esp_chip_id", "ESP chip id");
+        static auto &bootVersion = registry.gauge("esp_boot_version", "");
+        static auto &bootMode = registry.gauge("esp_boot_mode", "");
+        static auto &cpuFreqMhz = registry.gauge("esp_cpu_freq_mhz", "");
+        static auto &flashChipId = registry.gauge("esp_flash_chip_id", "");
+        static auto &flashChipRealSize = registry.gauge("esp_flash_chip_real_size", "");
+        static auto &flashChipSize = registry.gauge("esp_flash_chip_size", "");
+        static auto &flashChipSpeed = registry.gauge("esp_flash_chip_speed", "");
+        static auto &flashChipSizeByChipId = registry.gauge("esp_flash_chip_size_by_chip_id", "");
+        static auto &resetReason = registry.gauge("esp_reset_reason", "");
+        static auto &sketchSize = registry.gauge("esp_sketch_size", "");
+        static auto &sketchFreeSpace = registry.gauge("esp_sketch_free_space", "");
+        static auto &espCycleCount = registry.counter("esp_cycle_total", "");
+      
+        vcc.set(ESP.getVcc()/1024.0);
+        freeHeap.set(ESP.getFreeHeap());
+        chipId.set(ESP.getChipId());
+        bootVersion.set(ESP.getBootVersion());
+        bootMode.set(ESP.getBootMode());
+        cpuFreqMhz.set(ESP.getCpuFreqMHz());
+        flashChipId.set(ESP.getFlashChipId());
+        flashChipRealSize.set(ESP.getFlashChipRealSize());
+        flashChipSize.set(ESP.getFlashChipSize());
+        flashChipSpeed.set(ESP.getFlashChipSpeed());
+        flashChipSizeByChipId.set(ESP.getFlashChipSizeByChipId());
+        resetReason.set(ESP.getResetInfoPtr()->reason);
+        sketchSize.set(ESP.getSketchSize());
+        sketchFreeSpace.set(ESP.getFreeSketchSpace());
+        espCycleCount.set(ESP.getCycleCount());
     };
 };
