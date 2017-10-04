@@ -93,7 +93,7 @@ public:
     };
 
     const GaugeCounter &gauge(const String &name, const String &desc){
-        static auto &allocCount = counterGauge("prometheus_gauge_alloc_count", "prometheus_gauge_alloc_count", "counter",std::vector<String>{}, GaugeCounter::LabelsMap{});
+        static auto &allocCount = counterGauge("prometheus_gauge_alloc_total", "prometheus_gauge_alloc_count", "counter",std::vector<String>{}, GaugeCounter::LabelsMap{});
         allocCount.increment(1);     
 
         return counterGauge(name, desc, "gauge", std::vector<String>{}, GaugeCounter::LabelsMap{});
@@ -104,19 +104,22 @@ public:
     };
 
     const GaugeCounter &gauge(const String &name, const String &desc, const std::vector<String> &requiredLabels, const GaugeCounter::LabelsMap &labelsMap){
-        static auto &allocCount = counterGauge("prometheus_gauge_alloc_count", "prometheus_gauge_alloc_count", "counter",std::vector<String>{}, GaugeCounter::LabelsMap{});
+        static auto &allocCount = counterGauge("prometheus_gauge_alloc_total", "prometheus_gauge_alloc_count", "counter",std::vector<String>{}, GaugeCounter::LabelsMap{});
         allocCount.increment(1);
 
         return counterGauge(name, desc, "gauge", requiredLabels, labelsMap);
     };
 
-    void addCollector(CollectorFunction fn) {
-        collectorFunctions.push_back(fn);
+    void addCollector(const CollectorFunction &fn) {
+        this->collectorFunctions.push_back(fn);
     }
 
     void collect(){
-        for (const auto &fn: collectorFunctions){
-            std::bind(fn, this);
+        static auto &collectCount = counterGauge("prometheus_collectors_total", "prometheus run collectors", "counter", std::vector<String>{}, GaugeCounter::LabelsMap{});
+        
+        for (const auto &fn: this->collectorFunctions){
+            collectCount.increment();
+            fn(*this);
         }
     };
 

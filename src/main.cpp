@@ -194,44 +194,6 @@ void configModeCallback(WiFiManager *myWiFiManager) {
   Serial.println(myWiFiManager->getConfigPortalSSID());
 }
 
-// static const auto &vcc = Prometheus.gauge("esp_vcc", "Voltage read if ADC is set to read VCC voltage");
-
-String infoEsp() {
-  // static auto &vcc = Prometheus.gauge("esp_vcc", "Voltage reading if ADC is set to read VCC voltage");
-  // static auto &freeHeap = Prometheus.gauge("esp_free_heap", "Free heap");
-  // static auto &chipId = Prometheus.gauge("esp_chip_id", "ESP chip id");
-  // static auto &bootVersion = Prometheus.gauge("esp_boot_version", "");
-  // static auto &bootMode = Prometheus.gauge("esp_boot_mode", "");
-  // static auto &cpuFreqMhz = Prometheus.gauge("esp_cpu_freq_mhz", "");
-  // static auto &flashChipId = Prometheus.gauge("esp_flash_chip_id", "");
-  // static auto &flashChipRealSize = Prometheus.gauge("esp_flash_chip_real_size", "");
-  // static auto &flashChipSize = Prometheus.gauge("esp_flash_chip_size", "");
-  // static auto &flashChipSpeed = Prometheus.gauge("esp_flash_chip_speed", "");
-  // static auto &flashChipSizeByChipId = Prometheus.gauge("esp_flash_chip_size_by_chip_id", "");
-  // static auto &resetReason = Prometheus.gauge("esp_reset_reason", "");
-  // static auto &sketchSize = Prometheus.gauge("esp_sketch_size", "");
-  // static auto &sketchFreeSpace = Prometheus.gauge("esp_sketch_free_space", "");
-  // static auto &espCycleCount = Prometheus.counter("esp_cycle_total", "");
-
-  // vcc.set(ESP.getVcc()/1024.0);
-  // freeHeap.set(ESP.getFreeHeap());
-  // chipId.set(ESP.getChipId());
-  // bootVersion.set(ESP.getBootVersion());
-  // bootMode.set(ESP.getBootMode());
-  // cpuFreqMhz.set(ESP.getCpuFreqMHz());
-  // flashChipId.set(ESP.getFlashChipId());
-  // flashChipRealSize.set(ESP.getFlashChipRealSize());
-  // flashChipSize.set(ESP.getFlashChipSize());
-  // flashChipSpeed.set(ESP.getFlashChipSpeed());
-  // flashChipSizeByChipId.set(ESP.getFlashChipSizeByChipId());
-  // resetReason.set(ESP.getResetInfoPtr()->reason);
-  // sketchSize.set(ESP.getSketchSize());
-  // sketchFreeSpace.set(ESP.getFreeSketchSpace());
-  // espCycleCount.set(ESP.getCycleCount());
-
-  return "";
-}
-
 void setupOta() {
   // Port defaults to 8266
   // ArduinoOTA.setPort(8266);
@@ -359,8 +321,9 @@ void handleMetrics() {
 
   response += fancy_ec();
   response += temperature();
-  response += infoEsp();
-  CommonCollectors::collectEspInfo(Prometheus);
+  // CommonCollectors::collectEspInfo(Prometheus);
+  // Prometheus.addCollector(CommonCollectors::collectEspInfo);
+  
 
   response += Prometheus.collectAndRepresent();
   response += "\n"; // TODO: is this newline still needed ?
