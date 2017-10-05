@@ -27,6 +27,8 @@ void tick() {
 
 ADC_MODE(ADC_VCC);
 
+#include <ec.h>
+
 //************************** End OF EC Function ***************************//
 
 String gaugeType(const String &name) { return "# TYPE " + name + " gauge\n"; }
@@ -46,9 +48,45 @@ String gaugeLabels(const String &name, const double &value, const String &label0
          "\n";
 }
 
+#include <esp8266_peri.h>
+inline int fastDigitalRead(uint8_t pin){
+  if(pin < 16){
+    return GPIP(pin);
+  } else if(pin == 16){
+    return GP16I & 0x01;
+  }
+  return 0;
+}
+
+// #define fastDigitalRead(p) ((GPI & (1 << ((p) & 0xF))) != 0)
+
+void fastDigitalWrite(uint8_t pin, uint8_t val){
+  if(pin < 16){
+    if(val) GPOS = (1 << pin);
+    else GPOC = (1 << pin);
+  } else if(pin == 16){
+    if(val) GP16O |= 1;
+    else GP16O &= ~1;
+  }
+}
+
+void fastOutputMode(uint8_t pin){
+  if(pin < 16){    
+    GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
+    GPC(pin) = (GPC(pin) & (0xF << GPCI)); //SOURCE(GPIO) | DRIVER(NORMAL) | INT_TYPE(UNCHANGED) | WAKEUP_ENABLE(DISABLED)
+    GPES = (1 << pin); //Enable
+  } else if(pin == 16){
+    GP16E |= 1;    
+  }
+}
+
+void fastInputMode(uint8_t pin){
+
+}
+
 void outputWrite(uint8_t pin, uint8_t val) {
-  pinMode(pin, OUTPUT);
-  digitalWrite(pin, val);
+  fastOutputMode(pin);
+  fastDigitalWrite(pin, val);
 }
 
 #include <DallasTemperature.h>
@@ -69,27 +107,29 @@ void setupDallas() {
   sensors.getAddress(insideThermometer, 0);
 }
 
-String temperature() { return ""; }
-
 float getTemperature() {
   sensors.requestTemperatures();
   return sensors.getTempC(insideThermometer);
 }
 
-// #define EC 3
-// #define C_P 12
-// #define C_M 14
+#define EC 13
+#define C_P 12
+#define C_M 14
 
-#define EC 3
-#define C_P 0
-#define C_M 2
+// #define EC 3
+// #define C_P 0
+// #define C_M 2
 
 float TemperatureCoef = 0.019;  // this changes depending on what chemical we are measuring
 float K = 10.0;
 
 Registry Prometheus;
 
-
+uint16_t waitForState(uint8_t pin, int state){
+  uint16_t c = 0;
+  while(++c < 5000 && fastDigitalRead(pin) == state) {}
+  return c;
+}
 
 String fancy_ec() {
   String res = "";
@@ -99,49 +139,67 @@ String fancy_ec() {
 
   unsigned long start = micros();
 
-  for (int i = 0; i < 16; i++) {
+  static int delayTime= 30;
+  int maxTries = 1000;
+
+  for (int i = 0; i < 17; i++) {
     pinMode(EC, INPUT);
     outputWrite(C_P, HIGH);
     outputWrite(C_M, LOW);
 
-    delayMicroseconds(100);
+    int c=0;
+    while (++c < maxTries && fastDigitalRead(EC) != HIGH) {
+    }
+
+    delayMicroseconds(delayTime);
 
     pinMode(C_P, INPUT);
 
     outputWrite(EC, LOW);
     unsigned long time0 = 0;
-    while (++time0 < 5000 && digitalRead(C_P) == HIGH) {
+    while (++time0 < maxTries && fastDigitalRead(C_P) == HIGH) {
     }
 
     pinMode(EC, INPUT);
     outputWrite(C_P, HIGH);
     outputWrite(C_M, HIGH);
 
-    // second measurement
-    delayMicroseconds(100);
+    c=0;
 
+
+    // second measurement
+    delayMicroseconds(delayTime);
+    
     digitalWrite(C_P, LOW);
-    delayMicroseconds(100);
+    delayMicroseconds(delayTime);
+    
+    c=0;
+    // while (++c < 5000 && fastDigitalRead(EC) != HIGH) {
+    // }
 
     pinMode(C_P, INPUT);
     outputWrite(EC, HIGH);
 
     unsigned long time1 = 0;
 
-    while (++time1 < 5000 && digitalRead(C_P) != HIGH) {
+    while (++time1 < maxTries && fastDigitalRead(C_P) != HIGH) {
     }
 
     pinMode(EC, LOW);
     outputWrite(C_P, LOW);
     outputWrite(C_M, LOW);
-    delayMicroseconds(100);
-
-    time0v.push_back(time0);
-    time1v.push_back(time1);
+    
+    delayMicroseconds(delayTime);
+    if (i>0){
+      time0v.push_back(time0);
+      time1v.push_back(time1);
+    }
   }
   double timeElapsed = (micros() - start) / 1000000.0;
   res += gauge("agro_ec_elapsed_seconds", timeElapsed);
-  res += gauge("agro_ec_frequency", 1.0 / (timeElapsed / 16.0));
+  double freq =  1.0 / (timeElapsed / 16.0);
+  // delayTime = freq
+  res += gauge("agro_ec_frequency", freq);
 
   float tempC = (getTemperature() + tempStart) / 2.0;
   // tempC = 25;
@@ -175,17 +233,6 @@ String fancy_ec() {
   return res;
 }
 
-String mcounter(const String &name, const float &value) {
-  String res = "# TYPE ";
-  res += name;
-  res += " counter\n";
-  res += name;
-  res += " ";
-  res += value;
-  res += "\n";
-  return res;
-};
-
 // gets called when WiFiManager enters configuration mode
 void configModeCallback(WiFiManager *myWiFiManager) {
   Serial.println("Entered config mode");
@@ -195,15 +242,6 @@ void configModeCallback(WiFiManager *myWiFiManager) {
 }
 
 void setupOta() {
-  // Port defaults to 8266
-  // ArduinoOTA.setPort(8266);
-
-  // Hostname defaults to esp8266-[ChipID]
-  // ArduinoOTA.setHostname("myesp8266");
-
-  // No authentication by default
-  // ArduinoOTA.setPassword((const char *)"123");
-
   ArduinoOTA.onStart([]() { Serial.println("Start"); });
   ArduinoOTA.onEnd([]() { Serial.println("\nEnd"); });
   ArduinoOTA.onProgress(
@@ -320,10 +358,6 @@ void handleMetrics() {
   String response = "";
 
   response += fancy_ec();
-  response += temperature();
-  // CommonCollectors::collectEspInfo(Prometheus);
-  // Prometheus.addCollector(CommonCollectors::collectEspInfo);
-  
 
   response += Prometheus.collectAndRepresent();
   response += "\n"; // TODO: is this newline still needed ?

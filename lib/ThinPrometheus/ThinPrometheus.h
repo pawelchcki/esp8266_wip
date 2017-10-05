@@ -1,3 +1,6 @@
+#ifndef THIN_PROMETHEUS_H
+#define THIN_PROMETHEUS_H
+
 #include <map>
 #include <vector>
 #include <functional>
@@ -172,3 +175,5 @@ struct CommonCollectors {
         espCycleCount.set(ESP.getCycleCount());
     };
 };
+
+#endif /* THIN_PROMETHEUS_H */
