@@ -355,22 +355,65 @@ String searchOneWire() {
 }
 
 void handleMetrics() {
-  String response = "";
+  // String response = Prometheus.collectAndRepresent();
 
-  response += fancy_ec();
+  // response += Prometheus.collectAndRepresent();
+  // response += "\n"; // TODO: is this newline still needed ?
 
-  response += Prometheus.collectAndRepresent();
-  response += "\n"; // TODO: is this newline still needed ?
-
-  server.send(200, "text/plain", response);
+  server.send(200, "text/plain",  Prometheus.collectAndRepresent());
 }
 
 void oneWireSearchEndpoint() { server.send(200, "text/plain", searchOneWire()); }
 
-void setup() {
-  Prometheus.addCollector(CommonCollectors::collectEspInfo);
+#include <BME280I2C.h>
+#include <SPI.h>
 
-  // Serial.begin(115200);
+#include <Wire.h>
+
+  BME280I2C::Settings settings(
+    BME280::OSR_X1,
+    BME280::OSR_X1,
+    BME280::OSR_X1,
+    BME280::Mode_Forced,
+    BME280::StandbyTime_1000ms,
+    BME280::Filter_Off,
+    BME280::SpiEnable_False,
+    0x76 // I2C address. I2C specific.
+  );
+
+  BME280I2C bme(settings);
+
+
+void collectGbM(Registry& registry) {
+  static auto &chipModel = registry.gauge("bme_chip_model", "Chip model");
+  chipModel.set(bme.chipModel());
+  float temp(NAN), hum(NAN), pres(NAN);
+
+  BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
+  BME280::PresUnit presUnit(BME280::PresUnit_Pa);
+  bme.read(pres, temp, hum, tempUnit, presUnit);
+
+  static auto &temperature = registry.gauge("bme_temperature_celsius", "Temperature");
+  temperature.set(temp);
+
+  static auto &pressure = registry.gauge("bme_pressure_pascals", "Pressure");
+  pressure.set(pres);
+
+  static auto &humidity = registry.gauge("bme_humidity_relative", "Humidity");
+  humidity.set(hum);
+}
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Booting");
+
+  Wire.begin(D3, D4);
+  bme.begin();
+
+  Prometheus.addCollector(CommonCollectors::collectEspInfo);
+  Prometheus.addCollector(collectGbM);
+
+  
   // set led pin as output
   pinMode(BUILTIN_LED, OUTPUT);
   // pinMode(4, INPUT_PULLUP);

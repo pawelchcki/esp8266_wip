@@ -34,7 +34,7 @@ private:
     }
 
     String toString(double value) const {        
-        return String(value);
+        return String(value); //TODO: fix representation
     }
     
 public:    
