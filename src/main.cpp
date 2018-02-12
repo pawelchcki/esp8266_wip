@@ -280,6 +280,10 @@ void setupWifiManager() {
   // enters Access Point mode
   wifiManager.setAPCallback(configModeCallback);
 
+  WiFiManagerParameter parameter("perter", "placeholder", "defaultValue", 100);
+  wifiManager.addParameter(&parameter);
+  // wifiManager.resetSettings();
+
   // fetches ssid and pass and tries to connect
   // if it does not connect it starts an access point with the specified
   // name
@@ -313,18 +317,6 @@ union {
   uint8_t bytes[2];
 } tint;
 
-void setupWire() {
-  // // Wire.begin(2, 0);
-  // Wire.begin();
-  // Wire.setClockStretchLimit(15000);
-  // // delay(1000);
-  // uint8_t cmd = 0b00010000;
-
-  // Wire.beginTransmission(121);
-  // Wire.write(cmd);
-  // Wire.endTransmission();
-}
-
 String searchOneWire() {
   byte i;
   byte present = 0;
@@ -355,11 +347,6 @@ String searchOneWire() {
 }
 
 void handleMetrics() {
-  // String response = Prometheus.collectAndRepresent();
-
-  // response += Prometheus.collectAndRepresent();
-  // response += "\n"; // TODO: is this newline still needed ?
-
   server.send(200, "text/plain",  Prometheus.collectAndRepresent());
 }
 
@@ -370,7 +357,12 @@ void oneWireSearchEndpoint() { server.send(200, "text/plain", searchOneWire()); 
 
 #include <Wire.h>
 
-  BME280I2C::Settings settings(
+class BMEQuerier {
+  BME280I2C bme;
+  const BME280I2C::Settings bmeSettings;
+  
+  public:
+  BMEQuerier() : bmeSettings(
     BME280::OSR_X1,
     BME280::OSR_X1,
     BME280::OSR_X1,
@@ -379,48 +371,50 @@ void oneWireSearchEndpoint() { server.send(200, "text/plain", searchOneWire()); 
     BME280::Filter_Off,
     BME280::SpiEnable_False,
     0x76 // I2C address. I2C specific.
-  );
+  ), bme(bmeSettings){
+  };
 
-  BME280I2C bme(settings);
+  void operator()(Registry& registry) {
+    auto chipModel = bme.chipModel();
+    if (chipModel != BME280::ChipModel_BME280){
+      return;
+    }
 
+    static auto &chipModelMetric = registry.gauge("bme_chip_model", "Chip model");
+    chipModelMetric.set(chipModel);
+    float temp(NAN), hum(NAN), pres(NAN);
 
-void collectGbM(Registry& registry) {
-  static auto &chipModel = registry.gauge("bme_chip_model", "Chip model");
-  chipModel.set(bme.chipModel());
-  float temp(NAN), hum(NAN), pres(NAN);
+    BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
+    BME280::PresUnit presUnit(BME280::PresUnit_Pa);
+    bme.read(pres, temp, hum, tempUnit, presUnit);
 
-  BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
-  BME280::PresUnit presUnit(BME280::PresUnit_Pa);
-  bme.read(pres, temp, hum, tempUnit, presUnit);
+    static auto &temperature = registry.gauge("bme_temperature_celsius", "Temperature");
+    temperature.set(temp);
 
-  static auto &temperature = registry.gauge("bme_temperature_celsius", "Temperature");
-  temperature.set(temp);
+    static auto &pressure = registry.gauge("bme_pressure_pascals", "Pressure");
+    pressure.set(pres);
 
-  static auto &pressure = registry.gauge("bme_pressure_pascals", "Pressure");
-  pressure.set(pres);
+    static auto &humidity = registry.gauge("bme_humidity_relative", "Humidity");
+    humidity.set(hum);
+  };
+};
 
-  static auto &humidity = registry.gauge("bme_humidity_relative", "Humidity");
-  humidity.set(hum);
-}
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
 
   Wire.begin(D3, D4);
-  bme.begin();
+  BMEQuerier querier;
 
   Prometheus.addCollector(CommonCollectors::collectEspInfo);
-  Prometheus.addCollector(collectGbM);
-
+  Prometheus.addCollector(querier);
   
-  // set led pin as output
   pinMode(BUILTIN_LED, OUTPUT);
-  // pinMode(4, INPUT_PULLUP);
-  // attachInterrupt(digitalPinToInterrupt(4), handleInterrupt, FALLING);
 
   Serial.println("Booting");
   setupWifiManager();
+
   setupOta();
 
   // if you get here you have connected to the WiFi
@@ -436,7 +430,6 @@ void setup() {
   server.on("/onewire", oneWireSearchEndpoint);
 
   server.begin();
-  setupWire();
   setupDallas();
 }
 

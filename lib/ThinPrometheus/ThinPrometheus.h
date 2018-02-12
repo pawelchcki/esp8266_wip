@@ -157,6 +157,17 @@ struct CommonCollectors {
         static auto &sketchSize = registry.gauge("esp_sketch_size", "");
         static auto &sketchFreeSpace = registry.gauge("esp_sketch_free_space", "");
         static auto &espCycleCount = registry.counter("esp_cycle_total", "");
+        static auto &espAggrCycleCount = registry.counter("esp_aggr_cycle_total", "");
+
+
+        static double prevCycleCount = 0;
+        double cycleCount = ESP.getCycleCount();
+        double diffCycleCount = cycleCount - prevCycleCount;
+        if (diffCycleCount < 0){
+            diffCycleCount = cycleCount;
+        }
+        prevCycleCount = cycleCount;
+        espAggrCycleCount.increment(diffCycleCount);
       
         vcc.set(ESP.getVcc()/1024.0);
         freeHeap.set(ESP.getFreeHeap());
